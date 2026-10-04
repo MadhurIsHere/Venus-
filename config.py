@@ -25,6 +25,12 @@ WHISPER_URL       = "http://127.0.0.1:8080/inference"
 WHISPER_TIMEOUT   = 30        # seconds to wait for Whisper response
 
 # ---------------------------------------------------------------------------
+# WAKE WORD (Phase 2)
+# ---------------------------------------------------------------------------
+WAKE_WORD_MODEL     = "alexa"     # Default built-in model (alexa, hey_jarvis). We will change to "venus" later!
+WAKE_WORD_THRESHOLD = 0.5         # 0.0 to 1.0 — lower = more sensitive, higher = less false positives
+
+# ---------------------------------------------------------------------------
 # VAD (Voice Activity Detection)
 # All durations in seconds unless noted
 # ---------------------------------------------------------------------------
