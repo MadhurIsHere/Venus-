@@ -44,21 +44,17 @@ def speak(text: str, wait: bool = True) -> bool:
         # We pipe the text into Piper, and pipe Piper's raw audio output directly into aplay.
         # This gives us ultra-low latency streaming playback (starts playing before it finishes generating!)
         
-        # Piper outputs 16-bit PCM at the model's sample rate (usually 22050Hz for standard voices)
-        # We can extract the sample rate from the .json config file, but 22050 is safe for default en_US voices.
-        
+        # Piper outputs a proper WAV file with headers if we use --output_file -
         piper_cmd = [
             PIPER_EXEC,
             "--model", model_path,
-            "--output-raw"
+            "--output_file", "-"
         ]
         
+        # aplay will read the WAV header from stdin and auto-configure sample rate/format!
         aplay_cmd = [
             "aplay",
-            "-r", "22050",
-            "-f", "S16_LE",
-            "-t", "raw",
-            "-q", "-"
+            "-"
         ]
         
         # Launch pipeline: echo text | piper | aplay
