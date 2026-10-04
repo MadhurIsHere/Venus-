@@ -47,11 +47,13 @@ class WakeWordDetector:
         
         # OpenWakeWord returns predictions in a dictionary keyed by the internal model name
         self._internal_name = list(self.oww_model.models.keys())[0]
+        # Initialize the buffer for 16kHz audio chunks
+        self.audio_buffer = []
         
     def process(self, chunk_s32_bytes: bytes) -> bool:
         """
         Takes a 48kHz S32_LE stereo chunk, converts it to 16kHz S16 mono,
-        and feeds it to openWakeWord. 
+        buffers it, and feeds it to openWakeWord in 1280-sample batches. 
         
         Returns True if the wake word was detected in this chunk.
         """
@@ -76,19 +78,31 @@ class WakeWordDetector:
         decimated_s32 = left_s32[::3]
         
         # 4. Convert S32 to S16 (divide by 65536)
-        # S32 range is roughly ±2 billion. S16 is ±32768.
         samples_s16 = [int(s / 65536.0) for s in decimated_s32]
         
-        # 5. Convert to numpy array as required by openWakeWord
-        audio_data = np.array(samples_s16, dtype=np.int16)
+        # 5. Add to buffer
+        self.audio_buffer.extend(samples_s16)
         
-        # 6. Predict!
-        prediction = self.oww_model.predict(audio_data)
+        # 6. openWakeWord wants at least 400 samples (ideally 1280)
+        # We will feed it in exact 1280 sample chunks (80ms of 16kHz audio)
+        chunk_size = 1280
         
-        score = prediction[self._internal_name]
-        if score > config.WAKE_WORD_THRESHOLD:
-            # We must reset the state after detection so it doesn't trigger continuously
-            self.oww_model.reset()
-            return True
+        while len(self.audio_buffer) >= chunk_size:
+            # Pop the first 1280 samples
+            batch = self.audio_buffer[:chunk_size]
+            self.audio_buffer = self.audio_buffer[chunk_size:]
             
+            # Convert to numpy array as required by openWakeWord
+            audio_data = np.array(batch, dtype=np.int16)
+            
+            # Predict!
+            prediction = self.oww_model.predict(audio_data)
+            score = prediction[self._internal_name]
+            
+            if score > config.WAKE_WORD_THRESHOLD:
+                # We must reset the state after detection so it doesn't trigger continuously
+                self.oww_model.reset()
+                self.audio_buffer.clear()
+                return True
+                
         return False
