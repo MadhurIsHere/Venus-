@@ -29,9 +29,6 @@ class WakeWordDetector:
         if openwakeword is None:
             raise RuntimeError("openwakeword is not installed. Run: pip install openwakeword tflite-runtime")
             
-        # Download pre-trained models if they don't exist
-        openwakeword.utils.download_models()
-        
         target_model = model_name or config.WAKE_WORD_MODEL
         print(f"[WakeWord] Loading model: {target_model}...", flush=True)
         
