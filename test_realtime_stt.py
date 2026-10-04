@@ -67,23 +67,13 @@ def banner(msg: str):
 
 
 def check_prerequisites() -> bool:
-    """Verify Whisper server is reachable before we start."""
-    print("[Init] Checking Whisper server...", end=" ", flush=True)
+    """Verify STT service is ready before we start."""
+    print("[Init] Checking STT API...", end=" ", flush=True)
     if stt.check_server():
         print("✓ reachable")
         return True
     else:
         print("✗ UNREACHABLE")
-        print(
-            "\n[ERROR] Whisper server is not running.\n"
-            "Start it first:\n\n"
-            "  cd ~/whisper.cpp\n"
-            "  ./build/bin/whisper-server \\\n"
-            "      -m models/ggml-base.en.bin \\\n"
-            "      -t 4 \\\n"
-            "      --host 127.0.0.1 \\\n"
-            "      --port 8080\n"
-        )
         return False
 
 

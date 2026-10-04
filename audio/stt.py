@@ -1,16 +1,9 @@
 """
-audio/stt.py — Whisper server HTTP client
+audio/stt.py — Google Speech Recognition API Client
 
-Sends a 16kHz mono S16 WAV file to the local Whisper server and returns
-the transcription text.
-
-Whisper server must already be running:
-    cd ~/whisper.cpp
-    ./build/bin/whisper-server \\
-        -m models/ggml-base.en.bin \\
-        -t 4 \\
-        --host 127.0.0.1 \\
-        --port 8080
+Sends a 16kHz mono S16 WAV file to Google's free STT API and returns
+the transcription text. This provides excellent Hinglish support out of the box
+with no local model required.
 
 Usage:
     from audio.stt import transcribe
@@ -21,7 +14,7 @@ Usage:
 
 import os
 import sys
-import requests
+import speech_recognition as sr
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
@@ -29,11 +22,11 @@ import config
 
 def transcribe(wav_path: str, delete_after: bool = True) -> str | None:
     """
-    POST a WAV file to the Whisper inference server.
+    Pass a WAV file to Google Speech Recognition.
 
     Args:
-        wav_path:     Path to a 16kHz / mono / S16 WAV file.
-        delete_after: If True, delete wav_path after successful transcription
+        wav_path:     Path to a WAV file.
+        delete_after: If True, delete wav_path after processing
                       to avoid accumulating temp files.
 
     Returns:
@@ -43,75 +36,41 @@ def transcribe(wav_path: str, delete_after: bool = True) -> str | None:
         print(f"[STT] ERROR: file not found: {wav_path}")
         return None
 
+    recognizer = sr.Recognizer()
+    text = None
+    
     try:
-        with open(wav_path, "rb") as f:
-            files = {"file": (os.path.basename(wav_path), f, "audio/wav")}
-            # language="hi" → Whisper uses Hindi/Hinglish mode (handles mixed Hindi+English)
-            # Set to None or remove for pure auto-detect
-            data  = {"language": "hi"}
-            response = requests.post(
-                config.WHISPER_URL,
-                files=files,
-                data=data,
-                timeout=config.WHISPER_TIMEOUT,
-            )
-
-        response.raise_for_status()
-
-        data = response.json()
-
-        # Whisper server returns {"text": "...", ...}
-        text = data.get("text", "").strip()
-
-        # Filter Whisper's special output tags that indicate no real speech:
-        # [BLANK_AUDIO] = silence, (singing ...) / (music) = background noise
-        NOISE_TAGS = {
-            "[blank_audio]",
-            "[silence]",
-        }
-        NOISE_PREFIXES = ("(singing", "(music", "(applause", "(noise", "(foreign")
-
-        text_lower = text.lower()
-        if text_lower in NOISE_TAGS or text_lower.startswith(NOISE_PREFIXES):
-            text = ""
-
-        if delete_after:
+        # Load the WAV file that our VAD module generated
+        with sr.AudioFile(wav_path) as source:
+            audio_data = recognizer.record(source)
+            
+            # Using language="hi-IN" helps Google understand Hindi & Hinglish much better
+            text = recognizer.recognize_google(audio_data, language="hi-IN")
+            
+        if text:
+            text = text.strip()
+            
+    except sr.UnknownValueError:
+        # Google could not understand the audio (likely noise or silence)
+        pass
+    except sr.RequestError as e:
+        print(f"[STT] ERROR: API Request failed; {e}")
+    except Exception as e:
+        print(f"[STT] Unexpected error: {e}")
+        
+    finally:
+        # Always clean up the temp file
+        if delete_after and os.path.exists(wav_path):
             try:
                 os.unlink(wav_path)
             except OSError:
                 pass
 
-        return text if text else None
-
-    except requests.exceptions.ConnectionError:
-        print("[STT] ERROR: Cannot connect to Whisper server. "
-              "Is it running on 127.0.0.1:8080?")
-        return None
-    except requests.exceptions.Timeout:
-        print(f"[STT] ERROR: Whisper server timed out after {config.WHISPER_TIMEOUT}s")
-        return None
-    except requests.exceptions.HTTPError as e:
-        print(f"[STT] HTTP error from Whisper server: {e}")
-        return None
-    except (ValueError, KeyError) as e:
-        print(f"[STT] Failed to parse Whisper response: {e}")
-        return None
-    except Exception as e:
-        print(f"[STT] Unexpected error: {e}")
-        return None
+    return text if text else None
 
 
 def check_server() -> bool:
     """
-    Quick health-check: can we reach the Whisper server?
-    Returns True if the server is reachable, False otherwise.
+    Quick health-check: For Google STT, we just assume it's up if we have internet.
     """
-    try:
-        # Hit the root endpoint — Whisper server serves a basic page there
-        r = requests.get(
-            config.WHISPER_URL.replace("/inference", "/"),
-            timeout=3,
-        )
-        return r.status_code < 500
-    except Exception:
-        return False
+    return True
