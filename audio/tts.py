@@ -62,18 +62,19 @@ def speak(text: str, wait: bool = True) -> bool:
         ]
         
         # Launch pipeline: echo text | piper | aplay
+        # We leave stderr=None so that any errors print to the console!
         piper_proc = subprocess.Popen(
             piper_cmd, 
             stdin=subprocess.PIPE, 
             stdout=subprocess.PIPE, 
-            stderr=subprocess.DEVNULL
+            stderr=None
         )
         
         aplay_proc = subprocess.Popen(
             aplay_cmd, 
             stdin=piper_proc.stdout, 
             stdout=subprocess.DEVNULL, 
-            stderr=subprocess.DEVNULL
+            stderr=None
         )
         
         # Allow piper to receive EOF when it finishes writing
