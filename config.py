@@ -28,7 +28,7 @@ WHISPER_TIMEOUT   = 30        # seconds to wait for Whisper response
 # VAD (Voice Activity Detection)
 # All durations in seconds unless noted
 # ---------------------------------------------------------------------------
-VAD_CHUNK_FRAMES      = 2048       # frames per ALSA read chunk (~42 ms at 48k)
+VAD_CHUNK_FRAMES      = 512        # frames per ALSA read chunk (must match arecord period-size)
 VAD_ENERGY_THRESHOLD  = None       # None → auto-calibrate on startup
 VAD_CALIBRATION_SECS  = 1.5       # how long to listen for ambient noise level
 VAD_ENERGY_MULTIPLIER = 2.0       # voice must be N× above ambient noise floor (lowered to catch softer speech)
