@@ -105,9 +105,14 @@ def run():
 
     # Create and calibrate VAD
     vad = VoiceActivityDetector()
-    vad.calibrate(capture)
+    calibrated_threshold = vad.calibrate(capture)
 
-    print("\nListening... (Speak into the microphone, press Ctrl+C to stop)\n")
+    from audio.wakeword import WakeWordDetector
+    
+    # Initialize Wake Word Detector
+    wakeword = WakeWordDetector()
+    
+    print("\nListening for wake word... (Say 'alexa' or 'hey jarvis', press Ctrl+C to stop)\n")
 
     # ----------------------------------------------------------------
     # Main transcription loop
@@ -116,6 +121,11 @@ def run():
     import concurrent.futures
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 
+    # State machine
+    STATE_ASLEEP = "ASLEEP"
+    STATE_AWAKE  = "AWAKE"
+    current_state = STATE_ASLEEP
+
     def _do_transcribe(w_path):
         print("[Transcribing]", flush=True)
         text = stt.transcribe(w_path, delete_after=True)
@@ -123,25 +133,35 @@ def run():
             print(f"[STT] {text}\n")
         else:
             print("[STT] (no speech recognised)\n")
-        print("Listening...\n", flush=True)
+        print("Listening for wake word...\n", flush=True)
 
     while not stop_flag["value"]:
         chunk = capture.read(timeout=1.0)
 
         if chunk is None:
-            # Timeout — just loop; allows Ctrl+C to be caught promptly
             if not capture.is_running():
                 print("[ERROR] arecord process died unexpectedly. Exiting.")
                 break
             continue
 
-        # Feed chunk to VAD
-        wav_path = vad.process(chunk)
+        if current_state == STATE_ASLEEP:
+            # 1. Feed chunk to Wake Word detector
+            if wakeword.process(chunk):
+                print("\n[WAKE WORD DETECTED] Wake word heard! Listening for command...")
+                current_state = STATE_AWAKE
+                # IMPORTANT: Reset the VAD so it doesn't accidentally trigger
+                # on the tail end of the wake word itself
+                vad = VoiceActivityDetector(threshold=calibrated_threshold)
+        
+        elif current_state == STATE_AWAKE:
+            # 2. Feed chunk to VAD
+            wav_path = vad.process(chunk)
 
-        if wav_path is not None:
-            utterance_count += 1
-            # Run STT in the background so we don't block the audio pipeline
-            executor.submit(_do_transcribe, wav_path)
+            if wav_path is not None:
+                utterance_count += 1
+                # Command finished! Go back to sleep while STT runs in background
+                current_state = STATE_ASLEEP
+                executor.submit(_do_transcribe, wav_path)
 
     # Clean up
     capture.stop()
