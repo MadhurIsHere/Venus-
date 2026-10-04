@@ -1,0 +1,15 @@
+# ── Keep (existing, still needed) ──────────────────────────────────────────
+google-genai
+pygame
+psutil
+
+# ── Security ────────────────────────────────────────────────────────────────
+python-dotenv
+
+# ── Phase 1: real-time STT ──────────────────────────────────────────────────
+requests              # HTTP client for Whisper server
+
+# ── To remove (Phase 2+, once Piper + local STT fully replace them) ─────────
+# edge-tts            # cloud TTS — remove when Piper is wired up
+# SpeechRecognition   # Google STT — remove when audio/capture + vad ready
+# PyAudio             # used by SpeechRecognition — remove with it

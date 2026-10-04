@@ -1,0 +1,25 @@
+# Secrets — NEVER commit these
+.env
+*.key
+secrets/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Audio temp files
+*.wav
+*.mp3
+voice_raw.wav
+voice_16k.wav
+temp_voice.*
+response.*
+greeting.*
+farewell.*
+
+# IDE / OS junk
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
