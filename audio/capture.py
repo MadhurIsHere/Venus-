@@ -47,9 +47,10 @@ class AlsaCapture:
         self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
 
-        # Bytes per chunk: frames × channels × bytes_per_sample (S32 = 4)
-        # Use 1024 frames (~21ms) for low-latency, responsive chunk delivery
-        self._chunk_frames = min(config.VAD_CHUNK_FRAMES, 1024)
+        # Bytes per chunk — must match --period-size in arecord command.
+        # 512 frames × 2 channels × 4 bytes (S32) = 4096 bytes per chunk.
+        # Each chunk = 512/48000 ≈ 10.7ms of audio.
+        self._chunk_frames = 512
         self.chunk_bytes = self._chunk_frames * config.CAPTURE_CHANNELS * 4
 
     # ------------------------------------------------------------------
@@ -84,8 +85,10 @@ class AlsaCapture:
             "-f", config.CAPTURE_FORMAT,
             "-r", str(config.CAPTURE_RATE),
             "-c", str(config.CAPTURE_CHANNELS),
-            "-t", "raw",   # raw PCM to stdout, no WAV header
-            # Note: --buffer-size omitted — can conflict with raw pipe mode
+            "--period-size=512",   # ALSA delivers data every ~10ms (512/48000)
+                                   # Without this, driver batches into large
+                                   # infrequent bursts — VAD sees few chunks
+            "-t", "raw",           # raw PCM to stdout, no WAV header
         ]
 
         self._stop_event.clear()

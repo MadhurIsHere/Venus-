@@ -162,7 +162,7 @@ class VoiceActivityDetector:
         # Sanity check: if threshold > 1.0 it can never be exceeded.
         # This usually means the I²S stream has residual DC or odd encoding.
         # Fall back to a fixed minimum that works well for MEMS mics.
-        FALLBACK_THRESHOLD = 0.01
+        FALLBACK_THRESHOLD = 0.005
         if candidate >= 0.95 or ambient_rms < 1e-9:
             print(
                 f"[VAD] Calibration result unusual "
