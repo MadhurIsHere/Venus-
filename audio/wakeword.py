@@ -29,12 +29,23 @@ class WakeWordDetector:
         if openwakeword is None:
             raise RuntimeError("openwakeword is not installed. Run: pip install openwakeword tflite-runtime")
             
+        # OpenWakeWord 0.6.0 removed bundled models. We will download it ourselves.
         target_model = model_name or config.WAKE_WORD_MODEL
-        print(f"[WakeWord] Loading model: {target_model}...", flush=True)
+        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", f"{target_model}.tflite")
         
-        # Initialize the model positionally to avoid kwargs bug on python 3.13
-        # Uses default tflite framework
-        self.oww_model = Model([target_model])
+        if not os.path.exists(model_path) and target_model == "alexa":
+            print(f"[WakeWord] Downloading {target_model} model...", flush=True)
+            import urllib.request
+            url = "https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/alexa_v0.1.tflite"
+            urllib.request.urlretrieve(url, model_path)
+            
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model file not found: {model_path}. Please train your custom model and place it here!")
+
+        print(f"[WakeWord] Loading model: {model_path}...", flush=True)
+        
+        # Initialize the model with the exact file path
+        self.oww_model = Model([model_path])
         
         # OpenWakeWord returns predictions in a dictionary keyed by the internal model name
         self._internal_name = list(self.oww_model.models.keys())[0]
