@@ -35,8 +35,8 @@ class WakeWordDetector:
         target_model = model_name or config.WAKE_WORD_MODEL
         print(f"[WakeWord] Loading model: {target_model}...", flush=True)
         
-        # Initialize the model
-        self.oww_model = Model(wakeword_models=[target_model], inference_framework="tflite")
+        # Initialize the model using ONNX (easier to install on Pi 5)
+        self.oww_model = Model(wakeword_models=[target_model], inference_framework="onnx")
         
         # OpenWakeWord returns predictions in a dictionary keyed by the internal model name
         self._internal_name = list(self.oww_model.models.keys())[0]
