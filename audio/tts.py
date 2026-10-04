@@ -51,9 +51,9 @@ def speak(text: str, wait: bool = True) -> bool:
             "--output_file", "-"
         ]
         
-        # aplay will read the WAV header from stdin and auto-configure sample rate/format!
+        # pw-play (Pipewire) routes directly to the default Bluetooth speaker on Pi 5!
         aplay_cmd = [
-            "aplay",
+            "pw-play",
             "-"
         ]
         
