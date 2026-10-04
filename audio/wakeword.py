@@ -31,20 +31,19 @@ class WakeWordDetector:
             
         # OpenWakeWord 0.6.0 removed bundled models. We will download it ourselves.
         target_model = model_name or config.WAKE_WORD_MODEL
-        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", f"{target_model}.tflite")
+        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", f"{target_model}.onnx")
         
         if not os.path.exists(model_path) and target_model == "alexa":
-            print(f"[WakeWord] Downloading {target_model} model...", flush=True)
+            print(f"[WakeWord] Downloading {target_model} (ONNX) model...", flush=True)
             import urllib.request
-            url = "https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/alexa_v0.1.tflite"
+            url = "https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/alexa_v0.1.onnx"
             urllib.request.urlretrieve(url, model_path)
             
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model file not found: {model_path}. Please train your custom model and place it here!")
 
-        # Initialize the model using keyword arguments but bypassing the name bug.
-        # Enforce tflite framework.
-        self.oww_model = Model(wakeword_model_paths=[model_path], inference_framework="tflite")
+        # Initialize the model purely with the exact ONNX file path
+        self.oww_model = Model(wakeword_model_paths=[model_path])
         
         # OpenWakeWord returns predictions in a dictionary keyed by the internal model name
         self._internal_name = list(self.oww_model.models.keys())[0]
