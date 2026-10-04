@@ -44,8 +44,8 @@ def transcribe(wav_path: str, delete_after: bool = True) -> str | None:
         with sr.AudioFile(wav_path) as source:
             audio_data = recognizer.record(source)
             
-            # Using language="hi-IN" helps Google understand Hindi & Hinglish much better
-            text = recognizer.recognize_google(audio_data, language="hi-IN")
+            # Using language="en-IN" (Indian English) returns Hinglish in English letters!
+            text = recognizer.recognize_google(audio_data, language="en-IN")
             
         if text:
             text = text.strip()
