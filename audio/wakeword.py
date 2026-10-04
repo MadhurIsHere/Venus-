@@ -42,10 +42,11 @@ class WakeWordDetector:
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model file not found: {model_path}. Please train your custom model and place it here!")
 
-        print(f"[WakeWord] Loading model: {model_path}...", flush=True)
-        
-        # Initialize the model with the exact file path
-        self.oww_model = Model([model_path])
+        # Initialize the model using purely positional arguments.
+        # This completely bypasses the openWakeWord 0.6.0 `@re_arg` kwargs bug on Python 3.13.
+        # Args: wakeword_models, class_mapping_dicts, enable_speex_noise_suppression, 
+        #       vad_threshold, custom_verifier_models, custom_verifier_threshold, inference_framework
+        self.oww_model = Model([model_path], [], False, 0.0, {}, 0.1, "tflite")
         
         # OpenWakeWord returns predictions in a dictionary keyed by the internal model name
         self._internal_name = list(self.oww_model.models.keys())[0]
