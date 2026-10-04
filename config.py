@@ -31,6 +31,11 @@ WAKE_WORD_MODEL     = "alexa"     # Default built-in model (alexa, hey_jarvis). 
 WAKE_WORD_THRESHOLD = 0.5         # 0.0 to 1.0 — lower = more sensitive, higher = less false positives
 
 # ---------------------------------------------------------------------------
+# TTS (Phase 3)
+# ---------------------------------------------------------------------------
+TTS_MODEL = "en_US-kathleen-low.onnx"   # Default Piper voice model (requires matching .json file)
+
+# ---------------------------------------------------------------------------
 # VAD (Voice Activity Detection)
 # All durations in seconds unless noted
 # ---------------------------------------------------------------------------
