@@ -41,26 +41,37 @@ os.makedirs(config.TEMP_DIR, exist_ok=True)
 def _pcm_s32_stereo_to_energy(raw_bytes: bytes) -> float:
     """
     Convert a chunk of S32_LE stereo PCM bytes to a normalised RMS energy
-    value in range [0, 1].  Only the left channel is used for efficiency.
+    value in range [0, 1], using AC-coupled (DC-bias-removed) RMS.
+
+    Why AC-coupled?
+    The INMP441 / ADAU7002 I²S stream often has a large DC offset baked
+    into the raw S32 values. Using plain RMS measures that DC component
+    instead of actual audio energy, making the threshold impossibly high.
+    Subtracting the mean (DC) before computing RMS isolates real audio.
+    Only the left channel is used for efficiency.
     """
-    # Each sample is 4 bytes (int32).  Stereo → left samples at index 0, 2, 4 …
-    num_frames = len(raw_bytes) // 8   # 8 bytes per stereo frame (2 × 4)
+    # 8 bytes per stereo frame: 2 × 4-byte S32 samples
+    num_frames = len(raw_bytes) // 8
     if num_frames == 0:
         return 0.0
 
-    # Unpack only left-channel samples (every other int32)
     fmt = f"<{num_frames * 2}i"
     try:
         all_samples = struct.unpack(fmt, raw_bytes[:num_frames * 8])
     except struct.error:
         return 0.0
 
-    left_samples = all_samples[::2]   # stride 2 → left channel only
+    left_samples = all_samples[::2]   # stride-2 → left channel only
+    n = len(left_samples)
 
-    # Normalise to [-1, 1] range (S32 max = 2^31 - 1)
+    # Subtract DC offset (mean) so the metric reflects actual audio energy
+    mean = sum(left_samples) / n
+    variance = sum((s - mean) ** 2 for s in left_samples) / n
+    ac_rms = variance ** 0.5
+
+    # Normalise against S32 max
     scale = 2_147_483_647.0
-    rms = (sum(s * s for s in left_samples) / len(left_samples)) ** 0.5
-    return rms / scale
+    return ac_rms / scale
 
 
 class VoiceActivityDetector:
@@ -115,7 +126,10 @@ class VoiceActivityDetector:
     def calibrate(self, capture, duration: float | None = None) -> float:
         """
         Listen to ambient noise for `duration` seconds and set the energy
-        threshold automatically as:  ambient_rms × VAD_ENERGY_MULTIPLIER
+        threshold automatically as:  ambient_ac_rms × VAD_ENERGY_MULTIPLIER
+
+        Uses AC-coupled (DC-removed) RMS so the INMP441/ADAU7002 DC offset
+        does not inflate the baseline measurement.
 
         Args:
             capture: An AlsaCapture instance that is already started.
@@ -125,7 +139,7 @@ class VoiceActivityDetector:
             The calibrated threshold value.
         """
         duration = duration or config.VAD_CALIBRATION_SECS
-        print(f"[VAD] Calibrating ambient noise level ({duration:.1f}s)...", flush=True)
+        print(f"[VAD] Calibrating ambient noise level ({duration:.1f}s) — stay quiet...", flush=True)
 
         total_energy = 0.0
         count = 0
@@ -143,11 +157,27 @@ class VoiceActivityDetector:
             return self._threshold
 
         ambient_rms = total_energy / count
-        self._threshold = ambient_rms * config.VAD_ENERGY_MULTIPLIER
+        candidate = ambient_rms * config.VAD_ENERGY_MULTIPLIER
 
-        # Guard: never set threshold so low that ambient noise triggers it
-        self._threshold = max(self._threshold, 0.002)
-        print(f"[VAD] Ambient RMS={ambient_rms:.5f}  threshold={self._threshold:.5f}")
+        # Sanity check: if threshold > 1.0 it can never be exceeded.
+        # This usually means the I²S stream has residual DC or odd encoding.
+        # Fall back to a fixed minimum that works well for MEMS mics.
+        FALLBACK_THRESHOLD = 0.01
+        if candidate >= 0.95 or ambient_rms < 1e-9:
+            print(
+                f"[VAD] Calibration result unusual "
+                f"(ambient={ambient_rms:.5f}, candidate={candidate:.5f}).\n"
+                f"[VAD] Falling back to fixed threshold={FALLBACK_THRESHOLD}. "
+                f"Adjust VAD_ENERGY_THRESHOLD in config.py if needed."
+            )
+            self._threshold = FALLBACK_THRESHOLD
+        else:
+            self._threshold = candidate
+            # Guard: never set threshold so low that ambient noise triggers it
+            self._threshold = max(self._threshold, 0.001)
+
+        print(f"[VAD] Ambient RMS={ambient_rms:.5f}  threshold={self._threshold:.5f}  "
+              f"(from {count} chunks)")
         return self._threshold
 
     def set_threshold(self, threshold: float):
