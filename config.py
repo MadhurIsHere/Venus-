@@ -35,7 +35,7 @@ VAD_ENERGY_MULTIPLIER = 2.0       # voice must be N× above ambient noise floor 
 VAD_MIN_SPEECH_SECS   = 0.40      # ignore bursts shorter than this
 VAD_SILENCE_TIMEOUT   = 2.00      # end utterance after this much silence (raised so pauses don't cut off)
 VAD_MAX_UTTERANCE     = 30.0      # hard cap — avoid runaway recording
-VAD_PRE_PADDING_SECS  = 0.20      # keep audio before voice detected (prevent clipping)
+VAD_PRE_PADDING_SECS  = 0.5      # keep audio before voice detected (prevent clipping)
 VAD_POST_PADDING_SECS = 0.30      # keep audio after silence (prevent clipping end)
 
 # ---------------------------------------------------------------------------

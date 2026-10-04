@@ -113,6 +113,17 @@ def run():
     # Main transcription loop
     # ----------------------------------------------------------------
     utterance_count = 0
+    import concurrent.futures
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+
+    def _do_transcribe(w_path):
+        print("[Transcribing]", flush=True)
+        text = stt.transcribe(w_path, delete_after=True)
+        if text:
+            print(f"[STT] {text}\n")
+        else:
+            print("[STT] (no speech recognised)\n")
+        print("Listening...\n", flush=True)
 
     while not stop_flag["value"]:
         chunk = capture.read(timeout=1.0)
@@ -129,19 +140,12 @@ def run():
 
         if wav_path is not None:
             utterance_count += 1
-            print("[Transcribing]", flush=True)
-
-            text = stt.transcribe(wav_path, delete_after=True)
-
-            if text:
-                print(f"[STT] {text}\n")
-            else:
-                print("[STT] (no speech recognised)\n")
-
-            print("Listening...\n", flush=True)
+            # Run STT in the background so we don't block the audio pipeline
+            executor.submit(_do_transcribe, wav_path)
 
     # Clean up
     capture.stop()
+    executor.shutdown(wait=False)
     banner(f"Session ended — {utterance_count} utterance(s) transcribed")
 
 
