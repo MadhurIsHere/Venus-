@@ -59,6 +59,18 @@ def transcribe(wav_path: str, delete_after: bool = True) -> str | None:
         # Whisper server returns {"text": "...", ...}
         text = data.get("text", "").strip()
 
+        # Filter Whisper's special output tags that indicate no real speech:
+        # [BLANK_AUDIO] = silence, (singing ...) / (music) = background noise
+        NOISE_TAGS = {
+            "[blank_audio]",
+            "[silence]",
+        }
+        NOISE_PREFIXES = ("(singing", "(music", "(applause", "(noise", "(foreign")
+
+        text_lower = text.lower()
+        if text_lower in NOISE_TAGS or text_lower.startswith(NOISE_PREFIXES):
+            text = ""
+
         if delete_after:
             try:
                 os.unlink(wav_path)
