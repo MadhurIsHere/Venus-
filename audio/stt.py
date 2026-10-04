@@ -46,9 +46,13 @@ def transcribe(wav_path: str, delete_after: bool = True) -> str | None:
     try:
         with open(wav_path, "rb") as f:
             files = {"file": (os.path.basename(wav_path), f, "audio/wav")}
+            # language="hi" → Whisper uses Hindi/Hinglish mode (handles mixed Hindi+English)
+            # Set to None or remove for pure auto-detect
+            data  = {"language": "hi"}
             response = requests.post(
                 config.WHISPER_URL,
                 files=files,
+                data=data,
                 timeout=config.WHISPER_TIMEOUT,
             )
 

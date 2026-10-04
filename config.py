@@ -16,6 +16,11 @@ CAPTURE_CHANNELS  = 2                     # Stereo (INMP441 via ADAU7002)
 # ---------------------------------------------------------------------------
 # WHISPER SERVER
 # ---------------------------------------------------------------------------
+# IMPORTANT: Use ggml-base.bin (multilingual) NOT ggml-base.en.bin (English only)
+# Start server with:
+#   ./build/bin/whisper-server -m models/ggml-base.bin -t 4 --host 127.0.0.1 --port 8080
+# Download multilingual model:
+#   bash models/download-ggml-model.sh base
 WHISPER_URL       = "http://127.0.0.1:8080/inference"
 WHISPER_TIMEOUT   = 30        # seconds to wait for Whisper response
 
