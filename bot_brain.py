@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 
 warnings.filterwarnings("ignore")
 
+import config
+
 # Load GEMINI_API_KEY from .env (never hard-code secrets in source)
 load_dotenv()
 API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -60,7 +62,7 @@ def chat_with_bot(user_message):
 
     try:
         response = client.models.generate_content(
-            model='gemini-3.8-flash',
+            model=config.GEMINI_MODEL,
             contents=user_message,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
