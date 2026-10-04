@@ -66,7 +66,7 @@ TEMP_WHISPER_FILE = os.path.join(TEMP_DIR, "utterance_16k.wav")
 # ---------------------------------------------------------------------------
 # GEMINI (fallback AI — loaded from environment)
 # ---------------------------------------------------------------------------
-GEMINI_MODEL      = "gemini-3.8-flash"
+GEMINI_MODEL      = "gemini-3.7-flash"
 MEMORY_FILE       = "venus_memory.json"
 
 # ---------------------------------------------------------------------------
