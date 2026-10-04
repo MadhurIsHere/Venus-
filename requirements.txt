@@ -9,7 +9,7 @@ python-dotenv
 # ── Phase 1: real-time STT ──────────────────────────────────────────────────
 # ── Phase 2: Wake Word ──────────────────────────────────────────────────────
 openwakeword
-onnxruntime           # required by openwakeword on Raspberry Pi
+ai-edge-litert        # new pip name for tflite-runtime
 
 # ── To remove (Phase 2+, once Piper + local STT fully replace them) ─────────
 # edge-tts            # cloud TTS — remove when Piper is wired up
